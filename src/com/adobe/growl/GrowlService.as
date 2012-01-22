@@ -232,14 +232,12 @@ package com.adobe.growl
 		 * 
 		 * @see NotificationType
 		*/		
-		public function connect(notificationTypes:Array = null):void
+		public function connect():void
 		{
 			if(!s.connected)
 			{
 				s.connect(host, port);
 			}
-			
-			register(notificationTypes);
 		}		
 		
 		/**
