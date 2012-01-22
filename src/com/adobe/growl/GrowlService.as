@@ -35,7 +35,8 @@ package com.adobe.growl
 	import com.adobe.growl.events.GrowlConnectionEvent;
 	import com.adobe.growl.events.GrowlErrorEvent;
 	import com.adobe.growl.events.GrowlResponseEvent;
-	
+	import com.adobe.growl.events.MessageParseEvent;
+
 	import flash.events.Event;
 	import flash.events.EventDispatcher;
 	import flash.events.IOErrorEvent;
@@ -43,7 +44,7 @@ package com.adobe.growl
 	import flash.events.SecurityErrorEvent;
 	import flash.net.Socket;
 	import flash.utils.Dictionary;
-	import com.adobe.growl.events.MessageParseEvent;
+	import flash.utils.setTimeout;
 	
 	/*
 		create ant task to build asdocs and SWC
@@ -276,8 +277,8 @@ package com.adobe.growl
 			mb.addHeader(new Header("Notification-Text", notification.text));
 			mb.addHeader(new Header("Notification-Sticky", (notification.sticky)?"Yes":"No"));
 			mb.addHeader(new Header("Notification-Priority", String(notification.priority)));
-			mb.addHeader(new Header("Notification-Callback-Context", _application.name));
-			mb.addHeader(new Header("Notification-Callback-Context-Type", "String"));
+//			mb.addHeader(new Header("Notification-Callback-Context", _application.name));
+//			mb.addHeader(new Header("Notification-Callback-Context-Type", "String"));
 					
 			if(notification.xHeaders != null)
 			{
@@ -287,7 +288,7 @@ package com.adobe.growl
 				}
 			}
 			
-			sendPacket(mb.toString());
+			addToQueue(mb.toString());
 		}	
 	
 		/**
@@ -329,13 +330,20 @@ package com.adobe.growl
 					mb.addHeader(new Header("Notification-Icon", n.iconPath));
 				}
 			}
-						
-			sendPacket(mb.toString());
+			
+			addToQueue(mb.toString());
 		}
 
 		
 		/******** private functions ************/
 		
+		private function addToQueue(p:String):void
+		{
+			packets.push(p);
+			
+			if (!s.connected)
+				connect();
+		}
 		
 		//sends a packet / message to Frowl
 		private function sendPacket(p:String):void
@@ -349,12 +357,6 @@ package com.adobe.growl
 				s.writeUTFBytes(p);
 				
 				s.flush();
-			}
-			else
-			{
-				//if not connected, queue up to send when we are connected
-				//this is mostly used to 
-				packets.push(p);
 			}
 		}
 		
@@ -383,12 +385,13 @@ package com.adobe.growl
 		//event handler when the socket is closed / disconnected
 		private function onSocketClose(e:Event):void
 		{
-			trace("socket close");
-			
 			//dispatch disconnect event
 			var gce:GrowlConnectionEvent = new GrowlConnectionEvent(GrowlConnectionEvent.DISCONNECT);
 			gce.application = _application;
 			dispatchEvent(gce);
+			
+			if (packets.length > 0)
+				setTimeout(connect, 100);
 		}
 		
 		//event handler for when the socket connects
@@ -399,12 +402,9 @@ package com.adobe.growl
 			gce.application = _application;
 			dispatchEvent(gce);
 			
-			//send any queued up packets
-			var p:String;
-			while(p = packets.shift())
-			{
-				sendPacket(p);
-			}
+//			//send first queued up packets
+			if (packets.length > 0)
+				sendPacket(packets.shift());
 		}
 		
 		//event handler in case there is a socket IOError
