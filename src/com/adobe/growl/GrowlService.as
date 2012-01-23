@@ -139,6 +139,8 @@ package com.adobe.growl
 	 */			
 	public class GrowlService extends EventDispatcher
 	{
+		public static var AVAILABLE:Boolean = true;
+		
 		//socket used to connect to the growl service
 		private var s:Socket;
 		
@@ -235,7 +237,7 @@ package com.adobe.growl
 		*/		
 		public function connect():void
 		{
-			if(!s.connected)
+			if (AVAILABLE && !s.connected)
 			{
 				s.connect(host, port);
 			}
@@ -410,6 +412,8 @@ package com.adobe.growl
 		//event handler in case there is a socket IOError
 		private function onSocketIOError(e:IOErrorEvent):void
 		{
+			AVAILABLE = false;
+			
 			trace("onSocketIOError : " + e.text);
 			var oe:IOErrorEvent = (e.clone() as IOErrorEvent);
 			dispatchEvent(oe);
